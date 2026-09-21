@@ -1,7 +1,9 @@
-from pathlib import Path
+import json
+import subprocess
+import sys
 
+from src.aiops_pipeline import load_data, run_pipeline
 from src.anomaly_detector import AnomalyDetector
-from src.aiops_pipeline import run_pipeline
 from src.event_consumer import EventConsumer
 from src.event_producer import EventProducer
 from src.event_topic import EventTopic
@@ -40,6 +42,44 @@ def test_anomalous_record_is_detected():
 
     assert event is not None
     assert event["type"] == "ANOMALY"
+    assert "High response time" in event["reasons"]
+    assert "Error log detected" in event["reasons"]
+
+
+def test_warning_log_is_not_an_error():
+    detector = AnomalyDetector()
+
+    record = {
+        "timestamp": "2026-09-20T10:05:00",
+        "service": "auth-service",
+        "response_time_ms": 200,
+        "cpu_percent": 50,
+        "memory_percent": 55,
+        "log_level": "WARNING",
+        "message": "Token refresh warning"
+    }
+
+    assert detector.detect(record) is None
+
+
+def test_high_cpu_and_memory_are_flagged():
+    detector = AnomalyDetector()
+
+    record = {
+        "timestamp": "2026-09-20T10:20:00",
+        "service": "inventory-service",
+        "response_time_ms": 210,
+        "cpu_percent": 85,
+        "memory_percent": 90,
+        "log_level": "INFO",
+        "message": "High resource usage"
+    }
+
+    event = detector.detect(record)
+
+    assert event is not None
+    assert "High CPU utilization" in event["reasons"]
+    assert "High memory utilization" in event["reasons"]
 
 
 def test_producer_publishes_event():
