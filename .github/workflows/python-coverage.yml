@@ -31,14 +31,16 @@ jobs:
           pip install pytest-cov==6.2.1
 
       - name: Run tests and generate coverage details
-        run: python -m pytest -vv --cov=src --cov-report=term-missing
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pytest -vv --cov=src --cov-report=term-missing --cov-report=xml
 
       - name: Coverage comment
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ github.token }}
-          MINIMUM_GREEN: 90
-          MINIMUM_ORANGE: 70
+          MINIMUM_GREEN: 100
+          MINIMUM_ORANGE: 100
 
       - name: Fail if below threshold
-        run: coverage report --fail-under=50
+        run: coverage report --fail-under=100
